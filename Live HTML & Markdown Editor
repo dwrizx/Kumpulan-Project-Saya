@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live HTML & Markdown Editor</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Highlight.js untuk syntax highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github.min.css">
+    <!-- Font Awesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .editor-container {
+            display: flex;
+            height: calc(100vh - 56px);
+        }
+        #editor {
+            width: 50%;
+            height: 100%;
+            font-family: Consolas, Monaco, 'Andale Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 15px;
+            resize: none;
+            border: none;
+            border-right: 1px solid #ccc;
+            box-shadow: none;
+            outline: none;
+        }
+        .preview-container {
+            width: 50%;
+            height: 100%;
+            overflow: auto;
+            padding: 15px;
+            border-left: 1px solid #ccc;
+        }
+        #preview {
+            min-height: 100%;
+        }
+        .navbar {
+            background-color: #2c3e50;
+        }
+        .btn-mode {
+            margin-right: 5px;
+        }
+        .btn-mode.active {
+            background-color: #1abc9c;
+            border-color: #1abc9c;
+        }
+        @media (max-width: 768px) {
+            .editor-container {
+                flex-direction: column;
+            }
+            #editor, .preview-container {
+                width: 100%;
+                height: 50%;
+            }
+            .preview-container {
+                border-left: none;
+                border-top: 1px solid #ccc;
+            }
+        }
+        .dark-mode {
+            background-color: #1e1e1e;
+            color: #f8f9fa;
+        }
+        .dark-mode #editor {
+            background-color: #252526;
+            color: #f8f9fa;
+            border-right-color: #444;
+        }
+        .dark-mode .preview-container {
+            background-color: #1e1e1e;
+            border-left-color: #444;
+        }
+        .dark-mode .navbar {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-code me-2"></i>Live Editor
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <button id="btn-html" class="btn btn-sm btn-mode btn-primary active" title="HTML Mode">
+                            <i class="fas fa-code"></i> HTML
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button id="btn-markdown" class="btn btn-sm btn-mode btn-primary" title="Markdown Mode">
+                            <i class="fab fa-markdown"></i> Markdown
+                        </button>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <button id="btn-theme" class="btn btn-sm btn-outline-light me-2" title="Toggle Dark/Light Mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="btn-save" class="btn btn-sm btn-success" title="Save as HTML File">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="editor-container">
+        <textarea id="editor" spellcheck="false" placeholder="Type your HTML or Markdown here..."></textarea>
+        <div class="preview-container">
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Marked.js untuk Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <!-- DOMPurify untuk keamanan -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.1/dist/purify.min.js"></script>
+    <!-- Highlight.js untuk syntax highlighting -->
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/lib/highlight.min.js"></script>
+
+    <script>
+        // Mode editor (HTML atau Markdown)
+        let editorMode = 'html';
+        let darkMode = false;
+        
+        // DOM Elements
+        const editor = document.getElementById('editor');
+        const preview = document.getElementById('preview');
+        const btnHTML = document.getElementById('btn-html');
+        const btnMarkdown = document.getElementById('btn-markdown');
+        const btnTheme = document.getElementById('btn-theme');
+        const btnSave = document.getElementById('btn-save');
+        
+        // Contoh kode HTML default
+        const defaultHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hello, World!</h1>
+    <p>This is a live HTML editor. Start editing and see your changes instantly!</p>
+</body>
+</html>`;
+
+        // Contoh markdown default
+        const defaultMarkdown = `# Markdown Live Editor
+
+## Features
+- Real-time preview
+- Syntax highlighting
+- HTML and Markdown support
+
+## Basic Markdown
+**Bold text** and *italic text*
+
+### Code Example
+\`\`\`javascript
+function sayHello() {
+    console.log("Hello, world!");
+}
+\`\`\`
+
+> This is a blockquote
+
+* List item 1
+* List item 2
+
+[Visit GitHub](https://github.com)
+`;
+
+        // Inisialisasi editor
+        editor.value = defaultHTML;
+        updatePreview();
+
+        // Event listeners
+        editor.addEventListener('input', updatePreview);
+        btnHTML.addEventListener('click', switchToHTML);
+        btnMarkdown.addEventListener('click', switchToMarkdown);
+        btnTheme.addEventListener('click', toggleTheme);
+        btnSave.addEventListener('click', saveFile);
+
+        // Fungsi untuk memperbarui preview
+        function updatePreview() {
+            if (editorMode === 'html') {
+                // Untuk HTML, tampilkan di iframe atau gunakan innerHTML dengan sanitasi
+                preview.innerHTML = DOMPurify.sanitize(editor.value);
+            } else {
+                // Untuk Markdown, konversi ke HTML dan tampilkan
+                const markdownHtml = marked.parse(editor.value);
+                preview.innerHTML = DOMPurify.sanitize(markdownHtml);
+                
+                // Terapkan syntax highlighting ke elemen code
+                document.querySelectorAll('#preview pre code').forEach((block) => {
+                    hljs.highlightBlock(block);
+                });
+            }
+        }
+
+        // Beralih ke mode HTML
+        function switchToHTML() {
+            if (editorMode !== 'html') {
+                if (confirm('Switch to HTML mode? Your current Markdown content will be preserved but the mode will change.')) {
+                    editorMode = 'html';
+                    btnHTML.classList.add('active');
+                    btnMarkdown.classList.remove('active');
+                    updatePreview();
+                }
+            }
+        }
+
+        // Beralih ke mode Markdown
+        function switchToMarkdown() {
+            if (editorMode !== 'markdown') {
+                if (confirm('Switch to Markdown mode? Your current HTML content will be preserved but the mode will change.')) {
+                    editorMode = 'markdown';
+                    btnMarkdown.classList.add('active');
+                    btnHTML.classList.remove('active');
+                    if (editor.value === defaultHTML) {
+                        editor.value = defaultMarkdown;
+                    }
+                    updatePreview();
+                }
+            }
+        }
+
+        // Toggle tema gelap/terang
+        function toggleTheme() {
+            darkMode = !darkMode;
+            document.body.classList.toggle('dark-mode', darkMode);
+            
+            if (darkMode) {
+                btnTheme.innerHTML = '<i class="fas fa-sun"></i>';
+                btnTheme.title = "Switch to Light Mode";
+            } else {
+                btnTheme.innerHTML = '<i class="fas fa-moon"></i>';
+                btnTheme.title = "Switch to Dark Mode";
+            }
+        }
+
+        // Menyimpan file
+        function saveFile() {
+            let content, filename, mimeType;
+            
+            if (editorMode === 'html') {
+                content = editor.value;
+                filename = 'document.html';
+                mimeType = 'text/html';
+            } else {
+                content = editor.value;
+                filename = 'document.md';
+                mimeType = 'text/markdown';
+            }
+            
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
