@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor Sempurna</title>
+    <!-- CodeMirror CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/xml/xml.min.js"></script>
+    <!-- Font Awesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #fff;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 10px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #61dafb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-input {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            border-radius: 4px;
+            outline: none;
+            width: 200px;
+            font-size: 16px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 8px 15px;
+            background-color: #333;
+            color: #ccc;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 2px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .tab.active {
+            background-color: #444;
+            color: #fff;
+        }
+        
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: calc(100vh - 170px);
+            transition: all 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .editor-container {
+                flex-direction: row;
+            }
+        }
+        
+        .code-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .code-section {
+                margin-right: 10px;
+                margin-bottom: 0;
+            }
+            
+            .code-section.fullwidth {
+                flex: 2;
+            }
+        }
+        
+        .editor-label {
+            background-color: #333;
+            padding: 5px 10px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .editor-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .editor-actions button {
+            padding: 3px 8px;
+            font-size: 12px;
+        }
+        
+        .editor-wrapper {
+            flex: 1;
+            border: 1px solid #444;
+            border-radius: 0 0 5px 5px;
+            overflow: hidden;
+        }
+        
+        .CodeMirror {
+            height: 100%;
+            font-size: 14px;
+        }
+        
+        .preview-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .preview-section.hidden {
+            display: none;
+        }
+        
+        .preview-label {
+            background-color: #333;
+            padding: 5px 10px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .preview-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .preview-wrapper {
+            flex: 1;
+            border: 1px solid #444;
+            border-radius: 0 0 5px 5px;
+            background-color: white;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+        }
+        
+        .close-fullscreen {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: white;
+        }
+        
+        button {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        button:hover {
+            background-color: #555;
+        }
+        
+        .run-btn {
+            background-color: #4CAF50;
+        }
+        
+        .run-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .newtab-btn {
+            background-color: #2196F3;
+        }
+        
+        .newtab-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .fullscreen-btn {
+            background-color: #9c27b0;
+        }
+        
+        .fullscreen-btn:hover {
+            background-color: #7B1FA2;
+        }
+        
+        .toggle-preview-btn {
+            background-color: #FF9800;
+        }
+        
+        .toggle-preview-btn:hover {
+            background-color: #e68a00;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .copy-btn {
+            background-color: #00ACC1;
+        }
+        
+        .copy-btn:hover {
+            background-color: #0097A7;
+        }
+        
+        .paste-btn {
+            background-color: #FFC107;
+        }
+        
+        .paste-btn:hover {
+            background-color: #FFA000;
+        }
+        
+        .delete-btn {
+            background-color: #E91E63;
+        }
+        
+        .delete-btn:hover {
+            background-color: #C2185B;
+        }
+        
+        .download-btn {
+            background-color: #3F51B5;
+        }
+        
+        .download-btn:hover {
+            background-color: #303F9F;
+        }
+        
+        .upload-btn {
+            background-color: #795548;
+        }
+        
+        .upload-btn:hover {
+            background-color: #5D4037;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .notification.success {
+            background-color: #4CAF50;
+        }
+        
+        .notification.error {
+            background-color: #f44336;
+        }
+        
+        .notification.info {
+            background-color: #2196F3;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            padding: 5px 0;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        /* Responsive adjustments for mobile */
+        @media (max-width: 767px) {
+            .logo {
+                font-size: 18px;
+            }
+            
+            .logo-input {
+                width: 140px;
+                font-size: 14px;
+            }
+            
+            .control-buttons {
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+            
+            button {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .editor-container {
+                height: calc(100vh - 200px);
+            }
+            
+            .preview-section:not(.hidden) {
+                min-height: 300px;
+            }
+            
+            .action-bar {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-code"></i>
+                <input type="text" class="logo-input" id="project-name" value="CodeEditor Project" placeholder="Project Name">
+            </div>
+            <div class="control-buttons">
+                <button class="toggle-preview-btn" id="togglePreviewBtn">
+                    <i class="fas fa-eye"></i> Preview
+                </button>
+                <button class="newtab-btn" id="newTabBtn">
+                    <i class="fas fa-external-link-alt"></i> New Tab
+                </button>
+                <button class="fullscreen-btn" id="fullscreenBtn">
+                    <i class="fas fa-expand"></i> Fullscreen
+                </button>
+                <button class="run-btn" id="runBtn">
+                    <i class="fas fa-play"></i> Run
+                </button>
+            </div>
+        </div>
+        
+        <div class="action-bar">
+            <button class="copy-btn" id="copyBtn">
+                <i class="fas fa-copy"></i> Copy
+            </button>
+            <button class="paste-btn" id="pasteBtn">
+                <i class="fas fa-paste"></i> Paste
+            </button>
+            <button class="delete-btn" id="deleteBtn">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+            <button class="download-btn" id="downloadBtn">
+                <i class="fas fa-download"></i> Download
+            </button>
+            <button class="upload-btn" id="uploadBtn">
+                <i class="fas fa-upload"></i> Upload
+            </button>
+            <input type="file" id="file-input" accept=".html,.css,.js,.txt">
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="html">HTML</button>
+            <button class="tab" data-tab="css">CSS</button>
+            <button class="tab" data-tab="js">JavaScript</button>
+        </div>
+        
+        <div class="editor-container">
+            <div class="code-section" id="codeSection">
+                <div class="editor-label">
+                    <span id="editor-title">Edit HTML</span>
+                    <div class="editor-actions">
+                        <button id="clearEditorBtn" title="Clear editor">
+                            <i class="fas fa-eraser"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="editor-wrapper">
+                    <textarea id="html-editor" class="editor"><!DOCTYPE html>
+<html>
+<head>
+    <title>My Page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <p>This is a simple example. Edit me!</p>
+    <button id="btn">Click Me</button>
+</body>
+</html></textarea>
+                    
+                    <textarea id="css-editor" class="editor hidden">body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f0f0f0;
+}
+
+h1 {
+    color: #333;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}</textarea>
+                    
+                    <textarea id="js-editor" class="editor hidden">document.getElementById('btn').addEventListener('click', function() {
+    alert('Button clicked!');
+});</textarea>
+                </div>
+            </div>
+            
+            <div class="preview-section" id="previewSection">
+                <div class="preview-label">
+                    <span>Live Preview</span>
+                    <div class="preview-actions">
+                        <button id="refreshPreviewBtn" class="refresh-btn" title="Refresh preview">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="preview-wrapper" id="previewWrapper">
+                    <iframe id="preview"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+    
+    <script>
+        // Inisialisasi CodeMirror
+        const htmlEditor = CodeMirror.fromTextArea(document.getElementById('html-editor'), {
+            mode: 'htmlmixed',
+            theme: 'monokai',
+            lineNumbers: true,
+            autoCloseTags: true,
+            autoCloseBrackets: true
+        });
+        
+        const cssEditor = CodeMirror.fromTextArea(document.getElementById('css-editor'), {
+            mode: 'css',
+            theme: 'monokai',
+            lineNumbers: true,
+            autoCloseBrackets: true
+        });
+        
+        const jsEditor = CodeMirror.fromTextArea(document.getElementById('js-editor'), {
+            mode: 'javascript',
+            theme: 'monokai',
+            lineNumbers: true,
+            autoCloseBrackets: true
+        });
+        
+        // Variabel untuk menyimpan editor aktif saat ini
+        let currentEditor = htmlEditor;
+        let currentEditorName = 'html';
+        
+        // Tab switching
+        const tabs = document.querySelectorAll('.tab');
+        const editors = {
+            'html': htmlEditor,
+            'css': cssEditor,
+            'js': jsEditor
+        };
+        
+        // Fungsi untuk menampilkan notifikasi
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + type;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                tab.classList.add('active');
+                
+                // Hide all editors
+                htmlEditor.getWrapperElement().classList.add('hidden');
+                cssEditor.getWrapperElement().classList.add('hidden');
+                jsEditor.getWrapperElement().classList.add('hidden');
+                
+                // Show the selected editor
+                const editorName = tab.getAttribute('data-tab');
+                editors[editorName].getWrapperElement().classList.remove('hidden');
+                editors[editorName].refresh();
+                
+                // Update current editor
+                currentEditor = editors[editorName];
+                currentEditorName = editorName;
+                
+                // Update editor title
+                document.getElementById('editor-title').textContent = `Edit ${editorName.toUpperCase()}`;
+            });
+        });
+        
+        // Ensure only HTML editor is visible at start
+        cssEditor.getWrapperElement().classList.add('hidden');
+        jsEditor.getWrapperElement().classList.add('hidden');
+        
+        // Get combined code for preview
+        function getCombinedCode() {
+            const html = htmlEditor.getValue();
+            const css = cssEditor.getValue();
+            const js = jsEditor.getValue();
+            
+            // Extract the body content from HTML
+            let bodyContent = html;
+            const headStart = html.indexOf('<head>');
+            const headEnd = html.indexOf('</head>');
+            const bodyStart = html.indexOf('<body>');
+            const bodyEnd = html.indexOf('</body>');
+            
+            let head = '';
+            if (headStart !== -1 && headEnd !== -1) {
+                head = html.substring(headStart + 6, headEnd);
+            }
+            
+            if (bodyStart !== -1 && bodyEnd !== -1) {
+                bodyContent = html.substring(bodyStart + 6, bodyEnd);
+            }
+            
+            return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    ${head}
+    <style>${css}</style>
+</head>
+<body>
+    ${bodyContent}
+    <script>${js}<\/script>
+</body>
+</html>`;
+        }
+        
+        // Preview update function
+        function updatePreview() {
+            const iframe = document.getElementById('preview');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            iframeDoc.open();
+            iframeDoc.write(getCombinedCode());
+            iframeDoc.close();
+        }
+        
+        // Run button
+        document.getElementById('runBtn').addEventListener('click', () => {
+            updatePreview();
+            showNotification('Kode dijalankan!', 'success');
+        });
+        
+        // Refresh preview button
+        document.getElementById('refreshPreviewBtn').addEventListener('click', () => {
+            updatePreview();
+            showNotification('Preview diperbarui!', 'info');
+        });
+        
+        // Clear editor button
+        document.getElementById('clearEditorBtn').addEventListener('click', () => {
+            if (confirm('Yakin ingin menghapus semua kode di editor ini?')) {
+                currentEditor.setValue('');
+                showNotification(`${currentEditorName.toUpperCase()} editor dibersihkan!`, 'info');
+            }
+        });
+        
+        // Toggle preview section
+        document.getElementById('togglePreviewBtn').addEventListener('click', () => {
+            const previewSection = document.getElementById('previewSection');
+            const codeSection = document.getElementById('codeSection');
+            const toggleBtn = document.getElementById('togglePreviewBtn');
+            
+            previewSection.classList.toggle('hidden');
+            
+            if (previewSection.classList.contains('hidden')) {
+                codeSection.classList.add('fullwidth');
+                toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Show Preview';
+            } else {
+                codeSection.classList.remove('fullwidth');
+                toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Preview';
+                updatePreview();
+            }
+            
+            // Refresh CodeMirror after toggling
+            htmlEditor.refresh();
+            cssEditor.refresh();
+            jsEditor.refresh();
+        });
+        
+        // New Tab Preview
+        document.getElementById('newTabBtn').addEventListener('click', () => {
+            const newWindow = window.open('', '_blank');
+            newWindow.document.write(getCombinedCode());
+            newWindow.document.close();
+            showNotification('Dibuka di tab baru!', 'success');
+        });
+        
+        // Fullscreen Preview
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            const previewWrapper = document.getElementById('previewWrapper');
+            
+            // Create full screen overlay
+            const fullscreenOverlay = document.createElement('div');
+            fullscreenOverlay.className = 'fullscreen';
+            
+            // Create iframe for fullscreen
+            const fullscreenIframe = document.createElement('iframe');
+            fullscreenIframe.style.width = '100%';
+            fullscreenIframe.style.height = '100%';
+            fullscreenIframe.style.border = 'none';
+            
+            // Create close button
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'close-fullscreen';
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            
+            // Add elements to DOM
+            fullscreenOverlay.appendChild(closeBtn);
+            fullscreenOverlay.appendChild(fullscreenIframe);
+            document.body.appendChild(fullscreenOverlay);
+            
+            // Write content to iframe
+            const fullscreenDoc = fullscreenIframe.contentDocument || fullscreenIframe.contentWindow.document;
+            fullscreenDoc.open();
+            fullscreenDoc.write(getCombinedCode());
+            fullscreenDoc.close();
+            
+            showNotification('Mode Fullscreen aktif!', 'info');
+            
+            // Close fullscreen when button is clicked
+            closeBtn.addEventListener('click', () => {
+                document.body.removeChild(fullscreenOverlay);
+                showNotification('Mode Fullscreen dimatikan!', 'info');
+            });
+            
+            // Also close when ESC key is pressed
+            document.addEventListener('keydown', function closeFullscreen(e) {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(fullscreenOverlay);
+                    document.removeEventListener('keydown', closeFullscreen);
+                    showNotification('Mode Fullscreen dimatikan!', 'info');
+                }
+            });
+        });
+        
+        // Copy button
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const selectedText = currentEditor.getSelection();
+            
+            if (selectedText) {
+                navigator.clipboard.writeText(selectedText)
+                    .then(() => {
+                        showNotification('Teks terpilih berhasil disalin!', 'success');
+                    })
+                    .catch(err => {
+                        showNotification('Gagal menyalin teks!', 'error');
+                        console.error('Copy failed: ', err);
+                    });
+            } else {
+                const allCode = currentEditor.getValue();
+                navigator.clipboard.writeText(allCode)
+                    .then(() => {
+                        showNotification(`Semua kode ${currentEditorName.toUpperCase()} berhasil disalin!`, 'success');
+                    })
+                    .catch(err => {
+                        showNotification('Gagal menyalin kode!', 'error');
+                        console.error('Copy failed: ', err);
+                    });
+            }
+        });
+        
+        // Paste button
+        document.getElementById('pasteBtn').addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                currentEditor.replaceSelection(text);
+                showNotification('Teks berhasil ditempel!', 'success');
+            } catch (err) {
+                showNotification('Gagal menempel teks! Pastikan izin clipboard diberikan.', 'error');
+                console.error('Paste failed: ', err);
+            }
+        });
+        
+        // Delete button
+        document.getElementById('deleteBtn').addEventListener('click', () => {
+            const selectedText = currentEditor.getSelection();
+            
+            if (selectedText) {
+                currentEditor.replaceSelection('');
+                showNotification('Teks terpilih berhasil dihapus!', 'success');
+            } else {
+                if (confirm('Tidak ada teks yang dipilih. Hapus semua kode?')) {
+                    currentEditor.setValue('');
+                    showNotification(`${currentEditorName.toUpperCase()} editor dibersihkan!`, 'success');
+                }
+            }
+        });
+        
+        // Download button
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const projectName = document.getElementById('project-name').value || 'CodeEditor Project';
+            const options = [
+                { name: 'HTML, CSS, dan JS (sebagai file HTML)', extension: 'html', content: getCombinedCode() },
+                { name: 'HTML saja', extension: 'html', content: htmlEditor.getValue() },
+                { name: 'CSS saja', extension: 'css', content: cssEditor.getValue() },
+                { name: 'JavaScript saja', extension: 'js', content: jsEditor.getValue() }
+            ];
+            
+            let selectedOption = window.prompt(`Pilih format download untuk "${projectName}":\n\n` + 
+                options.map((option, index) => `${index + 1}. ${option.name}`).join('\n') +
+                '\n\nMasukkan nomor (1-4):');
+                
+            if (selectedOption) {
+                selectedOption = parseInt(selectedOption) - 1;
+                if (selectedOption >= 0 && selectedOption < options.length) {
+                    const option = options[selectedOption];
+                    const fileName = `${projectName.replace(/\s+/g, '-').toLowerCase()}.${option.extension}`;
+                    const blob = new Blob([option.content], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                    
+                    URL.revokeObjectURL(url);
+                    showNotification(`File "${fileName}" berhasil didownload!`, 'success');
+                } else {
+                    showNotification('Pilihan tidak valid!', 'error');
+                }
+            }
+        });
+        
+        // Upload button
+        document.getElementById('uploadBtn').addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+        
+        // Handle file upload
+        document.getElementById('file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                
+                // Determine which editor to use based on file extension
+                if (file.name.endsWith('.html')) {
+                    // Activate HTML tab and editor
+                    document.querySelector('.tab[data-tab="html"]').click();
+                    htmlEditor.setValue(content);
+                    showNotification(`File HTML "${file.name}" berhasil diupload!`, 'success');
+                } else if (file.name.endsWith('.css')) {
+                    // Activate CSS tab and editor
+                    document.querySelector('.tab[data-tab="css"]').click();
+                    cssEditor.setValue(content);
+                    showNotification(`File CSS "${file.name}" berhasil diupload!`, 'success');
+                } else if (file.name.endsWith('.js')) {
+                    // Activate JS tab and editor
+                    document.querySelector('.tab[data-tab="js"]').click();
+                    jsEditor.setValue(content);
+                    showNotification(`File JavaScript "${file.name}" berhasil diupload!`, 'success');
+                } else {
+                    // Default to current editor
+                    currentEditor.setValue(content);
+                    showNotification(`File "${file.name}" berhasil diupload!`, 'success');
+                }
+                
+                // Update preview
+                updatePreview();
+            };
+            reader.readAsText(file);
+            
+            // Reset file input
+            event.target.value = '';
+        });
+        
+        // Initial preview
+        updatePreview();
+        
+        // Auto-resize CodeMirror on window resize
+        window.addEventListener('resize', () => {
+            htmlEditor.refresh();
+            cssEditor.refresh();
+            jsEditor.refresh();
+        });
+        
+        // Penyesuaian nama project
+        document.getElementById('project-name').addEventListener('change', function() {
+            showNotification(`Nama project diubah menjadi "${this.value}"`, 'info');
+        });
+        
+        // Auto-update preview on changes (with debounce)
+        let debounceTimer;
+        function debounceUpdate() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updatePreview, 500); // Buat live preview lebih responsif
+        }
+        
+        htmlEditor.on('change', debounceUpdate);
+        cssEditor.on('change', debounceUpdate);
+        jsEditor.on('change', debounceUpdate);
+        
+        // Keyboard shortcut
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+S untuk save/download
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('downloadBtn').click();
+            }
+            
+            // Ctrl+R untuk run
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                document.getElementById('runBtn').click();
+            }
+        });
+    </script>
+</body>
+</html>
